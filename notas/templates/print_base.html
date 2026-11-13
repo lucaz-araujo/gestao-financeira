@@ -1,0 +1,22 @@
+{% load static %}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer"><meta name="theme-color" content="#bd252a">
+  <title>{% block title %}Consulta fiscal{% endblock %} · Layout Sistemas</title>
+  <link rel="stylesheet" href="{% static 'css/layout-print.css' %}">
+</head>
+<body class="public-print-document">
+  <div class="print-toolbar"><button type="button" onclick="window.print()">{% block print_label %}Imprimir{% endblock %}</button>{% block extra_actions %}{% endblock %}</div>
+  <main class="print-page">
+    <header class="print-header">
+      <div class="print-header-top"><div class="print-brand"><img src="{% static 'img/logo_layout.png' %}" alt="Layout Sistemas"><div><strong>LAYOUT SISTEMAS</strong><span>GESTÃO FINANCEIRA</span></div></div><span class="print-reference">Consulta fiscal</span></div>
+      {% block company %}{% endblock %}
+      <h1>{% block heading %}{% endblock %}</h1>
+      <div class="print-metadata">{% block metadata %}{% endblock %}<span><b>Consulta em</b> {% now 'd/m/Y H:i' %}</span></div>
+    </header>
+    {% block document %}{% endblock %}
+    <footer class="print-footer"><span>Layout Sistemas</span><span>Gestão Financeira · Representação para consulta</span></footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,35 @@
+pipeline {
+  agent any
+  stages {
+    stage('Development') {
+      steps {
+
+              sh """
+                . ~/ambiente/envgestao/bin/activate
+                python --version
+                pip install -r requeriments.txt
+              """  
+              
+              sh """
+                . ~/ambiente/envfolha/bin/activate
+                python --version
+                python manage.py migrate                
+              """    
+      }
+    }
+    stage('Staging') {
+      steps {
+
+              sh 'git checkout origin/staging'
+
+              sh 'git checkout staging || git checkout -b staging'
+
+              sh 'git merge origin/development'
+
+              sh 'git push origin staging'             
+              
+              sh 'ssh -i ~/vestal.pem ubuntu@stagingestao.layoutsistemas.com.br ./server/deploy.sh laycliente staging'
+      }
+    }
+  }
+}

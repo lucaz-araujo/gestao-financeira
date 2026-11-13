@@ -1,0 +1,38 @@
+import { DeleteConfirmation } from '../components/DeleteConfirmation';
+import { Table } from '../components/DataTable';
+import { useEffect, useState } from 'react';
+import { Alert, App, Button, DatePicker, Drawer, Form, Input, InputNumber, Select, Space, } from 'antd';
+import dayjs from 'dayjs';
+import { api, errorMessage } from '../api';
+import { useSession } from '../session';
+import { RemoteSelect } from '../components/RemoteSelect';
+import type { Page, Row } from '../types';
+export type AccountingResource = 'planos' | 'centros' | 'tipos' | 'lancamentos';
+const configs = { planos: ['Planos de contas','planocontas'], centros: ['Centros de custo','centrocusto'], tipos: ['Tipos de despesa','tipodespesa'], lancamentos: ['Lançamentos contábeis','lancamentos'] };
+const required = [{ required:true, message:'Preencha este campo.' }];
+export function Accounting({resource}:{resource:AccountingResource}) {
+ const {empresa,can}=useSession(), {message}=App.useApp(), [form]=Form.useForm();
+ const [data,setData]=useState<Page<Row>>({count:0,results:[],next:null,previous:null}), [page,setPage]=useState(1), [search,setSearch]=useState(''), [reload,setReload]=useState(0);
+ const [editor,setEditor]=useState<Row|'new'|null>(null), [detail,setDetail]=useState<Row|null>(null), [error,setError]=useState(''), [saveError,setSaveError]=useState(''), [loading,setLoading]=useState(false), [saving,setSaving]=useState(false);
+ const [title,model]=configs[resource], url='/contabil/api/'+resource+'/', ledger=resource==='lancamentos';
+ useEffect(()=>{let active=true; const controller=new AbortController(); setLoading(true);setError('');const timer=setTimeout(()=>{api<Page<Row>>(url+'?'+new URLSearchParams({search,page:String(page)}),{signal:controller.signal},empresa).then(v=>{if(active)setData(v);}).catch(e=>{if(active)setError(errorMessage(e));}).finally(()=>{if(active)setLoading(false);});},200);return()=>{active=false;controller.abort();clearTimeout(timer);};},[url,empresa,page,search,reload]);
+ useEffect(()=>{if(editor){form.resetFields();form.setFieldsValue(editor==='new'?{dt_data:dayjs().toISOString(),tipo:ledger?'C':null}:editor);}},[editor,form,ledger]);
+ async function edit(row:Row|'new'){setSaveError('');try{setEditor(row==='new'?'new':await api<Row>(url+row.id+'/',{},empresa));}catch(e){void message.error(errorMessage(e));}}
+ async function save(values:Record<string,unknown>){if(!editor)return;setSaving(true);setSaveError('');try{await api(url+(editor==='new'?'':editor.id+'/'),{method:editor==='new'?'POST':'PATCH',body:JSON.stringify(values)},empresa);setEditor(null);setReload(v=>v+1);void message.success('Cadastro salvo.');}catch(e){setSaveError(errorMessage(e));}finally{setSaving(false);}}
+ async function remove(row:Row){try{await api(url+row.id+'/',{method:'DELETE'},empresa);if(data.results.length===1&&page>1)setPage(page-1);else setReload(v=>v+1);}catch(e){void message.error(errorMessage(e));}}
+ const columns=ledger?[{title:'Data',dataIndex:'dt_data',render:(v:string)=>dayjs(v).format('DD/MM/YYYY HH:mm')},{title:'Origem',dataIndex:'origem_nome'},{title:'Destino',dataIndex:'destino_nome'},{title:'Tipo',dataIndex:'tipo'},{title:'Valor',dataIndex:'valor',render:(v:string)=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}]:[{title:resource==='planos'?'Conta':'Código',dataIndex:resource==='planos'?'conta':'codigo'},{title:'Descrição',dataIndex:'descricao'},...(resource==='planos'?[{title:'Tipo',dataIndex:'tipo'}]:[{title:'Plano',dataIndex:'conta_nome'}])];
+ return <><div className="page-heading"><div><div className="eyebrow">CONTÁBIL</div><h1>{title}<span className="count-pill">{data.count}</span></h1><p>{ledger?'Registros contábeis entre planos da empresa.':'Organize a classificação contábil da empresa ativa.'}</p></div>{can('contabil.add_'+model)&&<Button type="primary" onClick={()=>edit('new')}>Novo cadastro</Button>}</div>
+ {resource==='tipos'&&<Alert type="info" showIcon title="Tipos compartilhados antigos estão disponíveis para consulta. Novos tipos devem possuir um plano da empresa." style={{marginBottom:20}}/>}
+ <section className="table-panel"><div className="table-toolbar"><Input aria-label="Buscar cadastro contábil" placeholder="Buscar cadastro" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} style={{maxWidth:300}}/><Button onClick={()=>setReload(v=>v+1)}>Atualizar</Button></div>{error&&<Alert type="error" title={error}/>}
+ <Table<Row> rowKey="id" dataSource={data.results} loading={loading} scroll={{x:800}} pagination={{current:page,pageSize:50,total:data.count,showSizeChanger:false,onChange:setPage}} columns={[...columns,{title:'Ações',render:(_,row)=><Space><Button onClick={()=>setDetail(row)}>Ver</Button>{!row.compartilhado&&can('contabil.change_'+model)&&<Button onClick={()=>edit(row)}>Editar</Button>}{!row.compartilhado&&can('contabil.delete_'+model)&&<DeleteConfirmation recordName={String(row.descricao ?? row.historico ?? `#${row.id}`)} title="Excluir cadastro?" description="Registros vinculados serão preservados." okText="Excluir" cancelText="Cancelar" onConfirm={()=>remove(row)}><Button danger>Excluir</Button></DeleteConfirmation>}</Space>}]}/></section>
+ <Drawer title={title} open={!!editor} size={620} destroyOnHidden onClose={()=>{if(!saving)setEditor(null);}} footer={<Button type="primary" loading={saving} onClick={()=>form.submit()}>Salvar cadastro</Button>}>{saveError&&<Alert type="error" title={saveError}/>}<Form form={form} layout="vertical" onFinish={save}>
+ {!ledger&&<Form.Item name={resource==='planos'?'conta':'codigo'} label={resource==='planos'?'Conta':'Código'} rules={required}><Input maxLength={resource==='planos'?15:3}/></Form.Item>}
+ <Form.Item name="descricao" label="Descrição" rules={required}><Input maxLength={resource==='planos'?100:60}/></Form.Item>
+ {resource==='planos'?<><Form.Item name="codigo" label="Código resumido"><Input maxLength={5}/></Form.Item><Form.Item name="tipo" label="Tipo"><Select allowClear options={[{value:'R',label:'Receita'},{value:'D',label:'Despesa'}]}/></Form.Item></>:ledger?<>
+ <Form.Item name="dt_data" label="Data e hora" rules={required} getValueProps={v=>({value:v?dayjs(v):null})} normalize={v=>v?.toISOString()}><DatePicker showTime format="DD/MM/YYYY HH:mm"/></Form.Item>
+ <Form.Item name="tipo" label="Tipo" rules={required}><Select options={[{value:'C',label:'Crédito'},{value:'D',label:'Débito'}]}/></Form.Item>
+ {['conta_origem','conta_destino'].map((field,i)=><Form.Item key={field} name={field} label={i?'Conta de destino':'Conta de origem'} rules={required}><RemoteSelect url="/contabil/api/opcoes/" labelField="descricao"/></Form.Item>)}
+ <Form.Item name="valor" label="Valor" rules={required}><InputNumber<string> stringMode min="0.01" max="99999999.99" precision={2} decimalSeparator=","/></Form.Item></>:<Form.Item name="conta" label="Plano de contas" rules={resource==='tipos'?required:[]}><RemoteSelect url="/contabil/api/opcoes/" labelField="descricao"/></Form.Item>}
+ </Form></Drawer>
+ <Drawer title="Detalhes do cadastro" open={!!detail} onClose={()=>setDetail(null)}>{detail&&<dl>{Object.entries(detail).map(([k,v])=><div key={k} style={{marginBottom:12}}><dt>{({id:'Registro',empresa:'Empresa',conta:'Conta',codigo:'Código',descricao:'Descrição',tipo:'Tipo',dt_data:'Data e hora',conta_nome:'Plano',origem_nome:'Origem',destino_nome:'Destino',valor:'Valor',compartilhado:'Compartilhado',conta_origem:'Registro de origem',conta_destino:'Registro de destino'} as Record<string,string>)[k]??k}</dt><dd>{v==null?'—':typeof v==='boolean'?(v?'Sim':'Não'):String(v)}</dd></div>)}</dl>}</Drawer></>;
+}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Gestão Financeira Django
+After=network.target postgresql.service
+[Service]
+Type=simple
+User=USUARIO_DO_SERVICO
+Group=GRUPO_DO_SERVICO
+WorkingDirectory=/CAMINHO/gestaofinanceira
+Environment=DJANGO_SETTINGS_MODULE=layCliente.production
+Environment=DJANGO_ENV_FILE=/CAMINHO_PRIVADO/production.env
+ExecStart=/CAMINHO/gestaofinanceira/.venv/bin/gunicorn layCliente.wsgi:application --bind 127.0.0.1:8001 --workers 3 --timeout 120
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

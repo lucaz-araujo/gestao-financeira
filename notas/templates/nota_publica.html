@@ -1,0 +1,24 @@
+{% extends 'print_base.html' %}
+{% load l10n %}
+{% block title %}Nota {{ nota.numero|unlocalize }}{% endblock %}
+{% block company %}<div class="print-company">{{ nota.empresa.razao }}</div>{% endblock %}
+{% block heading %}Nota fiscal de serviços {{ nota.numero|unlocalize }}{% endblock %}
+{% block metadata %}<span><b>CNPJ do emitente</b> {{ nota.empresa.cnpj }}</span><span><b>Inscrição municipal</b> {{ nota.empresa.inscricao_municipal|default:'—' }}</span>{% endblock %}
+{% block document %}
+  <p class="print-fiscal-notice">Representação para consulta. Verifique a autenticidade junto ao município emissor.</p>
+  {% if nota.cancelada_em %}<p class="print-cancelled">CANCELADA em {{ nota.cancelada_em|date:'d/m/Y H:i' }}</p>{% endif %}
+  <section class="print-section"><h2>Identificação da nota</h2><dl class="print-fields">
+    <div class="full-width"><dt>Cliente</dt><dd>{{ nota.contrato.cliente.instituicao }}</dd></div>
+    <div><dt>CNPJ do cliente</dt><dd>{{ nota.contrato.cliente.cnpj|default:'—' }}</dd></div>
+    <div><dt>Competência</dt><dd>{{ nota.competencia }}/{{ nota.exercicio|unlocalize }}</dd></div>
+    <div><dt>Autorização</dt><dd>{{ nota.dt_data_autorizacao|date:'d/m/Y H:i'|default:'—' }}</dd></div>
+    <div><dt>Código de verificação</dt><dd>{{ nota.protocolo_recebimento }}</dd></div>
+    <div class="full-width"><dt>Município da prestação</dt><dd>{{ nota.cidade|default:'—' }} / {{ nota.uf.sigla|default:'—' }}</dd></div>
+  </dl></section>
+  <section class="print-section"><h2>Discriminação dos serviços</h2><div class="print-service-text">{{ nota.texto_nota|linebreaksbr }}</div></section>
+  <section class="print-section"><h2>Dados do serviço</h2><dl class="print-fields">
+    <div><dt>Serviço</dt><dd>{{ nota.coigo_servico|default:'—' }}</dd></div><div><dt>CNAE</dt><dd>{{ nota.codigo_cnae|default:'—' }}</dd></div>
+    <div class="full-width"><dt>Tributação municipal</dt><dd>{{ nota.codigo_tributacao_municipio|default:'—' }}</dd></div>
+  </dl></section>
+  <div class="print-values"><div><span>Valor bruto</span><strong>R$ {{ nota.valor_bruto|floatformat:2 }}</strong></div><div><span>ISS · {{ nota.aliq_imposto|floatformat:2 }}%</span><strong>R$ {{ nota.imposto|floatformat:2 }}</strong></div><div><span>Valor líquido</span><strong>R$ {{ nota.valor_liquido|floatformat:2 }}</strong></div></div>
+{% endblock %}

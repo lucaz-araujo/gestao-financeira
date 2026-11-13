@@ -1,0 +1,47 @@
+# Substituir domínio, caminhos e certificado HTTPS antes de instalar.
+# Este certificado HTTPS é distinto do certificado A1 usado na emissão fiscal.
+limit_req_zone $binary_remote_addr zone=auth_financeiro:10m rate=10r/m;
+upstream financeiro_django { server 127.0.0.1:8001; }
+server {
+    listen 80 default_server;
+    server_name _;
+    return 444;
+}
+server {
+    listen 80;
+    server_name financeiro.example.invalid;
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name financeiro.example.invalid;
+    ssl_certificate /etc/letsencrypt/live/financeiro.example.invalid/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/financeiro.example.invalid/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 10m;
+    location /static/ { alias /CAMINHO/gestaofinanceira/staticfiles/; }
+    location /media/ {
+        alias /CAMINHO/gestaofinanceira/media/;
+        add_header X-Content-Type-Options nosniff always;
+        # Mídia de perfil/empresa: nenhum certificado ou extensão executável público.
+        location ~* \.(pfx|p12|pem|key|php|py|html|svg)$ { deny all; }
+    }
+    location ~ ^/(admin/login/|api/token/(refresh/)?|clientes/api/auth/login/|usuario/api/recuperacao/) {
+        limit_req zone=auth_financeiro burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://financeiro_django;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 120s;
+    }
+    location / {
+        proxy_pass http://financeiro_django;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 120s;
+    }
+}

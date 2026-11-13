@@ -1,0 +1,10 @@
+pipeline {
+  agent any
+  stages {
+    stage('Production') {
+      steps {
+            sh 'ssh -i ~/vestal.pem ubuntu@gestao.layoutsistemas.com.br ./server/deploy.sh laycliente staging'
+      }
+    }
+  }
+}

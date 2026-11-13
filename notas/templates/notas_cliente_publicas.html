@@ -1,0 +1,12 @@
+{% extends 'print_base.html' %}
+{% load l10n static %}
+{% block title %}Notas fiscais{% endblock %}
+{% block heading %}Notas fiscais de serviço{% endblock %}
+{% block print_label %}Imprimir lista{% endblock %}
+{% block extra_actions %}<button type="button" id="export-public-notes">Exportar planilha (CSV)</button><script src="{% static 'js/public-table-export.js' %}" defer></script>{% endblock %}
+{% block document %}
+  <table class="print-native-table"><thead><tr><th>Nota</th><th>Competência</th><th>Valor líquido</th><th>Situação</th></tr></thead><tbody>
+    {% for nota, link in notas %}<tr><td><a href="{{ link }}">{{ nota.numero|unlocalize }}</a></td><td>{{ nota.competencia }}/{{ nota.exercicio|unlocalize }}</td><td>R$ {{ nota.valor_liquido|floatformat:2 }}</td><td>{% if nota.cancelada_em %}Cancelada{% else %}Autorizada{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4">Nenhuma nota autorizada disponível.</td></tr>{% endfor %}
+  </tbody></table>
+{% endblock %}

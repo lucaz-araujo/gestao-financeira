@@ -1,0 +1,26 @@
+import { test, expect } from '@playwright/test';
+test('contábil: cadastro, edição e exclusão de plano e proteção do tipo compartilhado', async ({page})=>{
+ await page.goto('/clientes/app/contabil-planos');
+ await page.getByLabel('Usuário',{exact:true}).fill(process.env.E2E_USERNAME!);
+ await page.getByLabel('Senha',{exact:true}).fill(process.env.E2E_PASSWORD!);
+ await page.getByRole('button',{name:'Entrar',exact:true}).click();
+ await expect(page.getByRole('heading',{name:/Planos de contas/})).toBeVisible();
+ await page.getByRole('button',{name:'Novo cadastro',exact:true}).click();
+ await page.getByLabel('Conta',{exact:true}).fill('9.001');
+ await page.getByLabel('Descrição',{exact:true}).fill('Plano navegador');
+ await page.getByRole('button',{name:'Salvar cadastro',exact:true}).click();
+ const row=page.getByRole('row').filter({hasText:'Plano navegador'});
+ await expect(row).toBeVisible();
+ await row.getByRole('button',{name:'Editar',exact:true}).click();
+ await page.getByLabel('Descrição',{exact:true}).fill('Plano atualizado');
+ await page.getByRole('button',{name:'Salvar cadastro',exact:true}).click();
+ const updated=page.getByRole('row').filter({hasText:'Plano atualizado'});
+ await expect(updated).toBeVisible();
+ await updated.getByRole('button',{name:'Excluir',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Excluir',exact:true}).click();
+ await expect(updated).toHaveCount(0);
+ await page.getByRole('link',{name:'Tipos de despesa',exact:true}).click();
+ const shared=page.getByRole('row').filter({hasText:'Compartilhado'});
+ await expect(shared).toBeVisible();
+ await expect(shared.getByRole('button',{name:'Editar',exact:true})).toHaveCount(0);
+});

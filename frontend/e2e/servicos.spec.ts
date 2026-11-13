@@ -1,0 +1,28 @@
+import { test, expect } from '@playwright/test';
+test('serviços: cadastro, edição, detalhes e exclusão',async({page})=>{
+ await page.goto('/clientes/app/servicos');
+ await page.getByLabel('Usuário',{exact:true}).fill(process.env.E2E_USERNAME!);
+ await page.getByLabel('Senha',{exact:true}).fill(process.env.E2E_PASSWORD!);
+ await page.getByRole('button',{name:'Entrar',exact:true}).click();
+ await expect(page.getByRole('heading',{name:/Serviços por cliente/})).toBeVisible();
+ await expect(page.getByRole('cell',{name:'Serviço Beta',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Novo serviço',exact:true}).click();
+ await page.getByLabel('Cliente',{exact:true}).click();
+ await page.locator('.ant-select-dropdown:visible').getByText('Cliente Alfa',{exact:true}).click();
+ await page.getByLabel('Descrição',{exact:true}).fill('Serviço navegador');
+ await page.getByRole('button',{name:'Salvar serviço',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Cadastro de serviço'})).toBeHidden();
+ let row=page.getByRole('row').filter({hasText:'Serviço navegador'});await expect(row).toBeVisible();
+ await row.getByRole('button',{name:'Editar',exact:true}).click();
+ await expect(page.getByLabel('Descrição',{exact:true})).toHaveValue('Serviço navegador');
+ await page.getByLabel('Descrição',{exact:true}).fill('Serviço atualizado');
+ await page.getByRole('button',{name:'Salvar serviço',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Cadastro de serviço'})).toBeHidden();
+ row=page.getByRole('row').filter({hasText:'Serviço atualizado'});await expect(row).toBeVisible();
+ await row.getByRole('button',{name:'Ver',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Detalhes do serviço'})).toBeVisible();
+ await page.getByRole('button',{name:/^(Close|Fechar)$/}).click();
+ await row.getByRole('button',{name:'Excluir',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Excluir',exact:true}).click();
+ await expect(row).toHaveCount(0);
+});

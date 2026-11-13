@@ -1,0 +1,27 @@
+Guia para instalar o PyNFe e suas dependências no Ubuntu
+
+Ubuntu 16.04 LTS/14.04 LTS/14.10/15.04/15.10
+
+pip para python 3
+
+digite na linha de comando/terminal:
+
+sudo apt-get install python3-pip
+xmlsec1 e openssl
+
+sudo apt-get install xmlsec1
+lxml, pyopenssl e requests
+
+sudo pip3 install lxml pyopenssl requests
+suds-jurko e pyxb (Para NFS-e)
+
+sudo pip3 install suds-jurko pyxb
+PyNFe
+
+sudo pip3 install https://github.com/TadaSoftware/PyNFe/archive/master.zip
+Observações No Ubuntu 16.04 eu tive problemas de dependências para instalar o openssl devido a lib cryptography.
+
+Para corrigir foi preciso instalar essas dependências:
+
+sudo apt-get install build-essential libssl-dev libffi-dev python-dev
+NOTA: é necessário possuir senha do root.

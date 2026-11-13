@@ -1,0 +1,30 @@
+import { test, expect, type Page } from '@playwright/test';
+async function select(page:Page,label:string,value:string){await page.getByLabel(label,{exact:true}).click();await page.locator('.ant-select-dropdown:visible').getByText(value,{exact:true}).click();await expect(page.locator('.ant-select-dropdown:visible')).toHaveCount(0);}
+test('chaves de serviço: gerar, editar competência, recalcular e excluir',async({page})=>{
+ await page.goto('/clientes/app/chaves');
+ await page.getByLabel('Usuário',{exact:true}).fill(process.env.E2E_USERNAME!);
+ await page.getByLabel('Senha',{exact:true}).fill(process.env.E2E_PASSWORD!);
+ await page.getByRole('button',{name:'Entrar',exact:true}).click();
+ await expect(page.getByRole('heading',{name:/Chaves de serviços/})).toBeVisible();
+ await page.getByRole('button',{name:'Nova chave',exact:true}).click();
+ await select(page,'Cliente','Cliente Alfa');await select(page,'Serviço','Servico ALFA');
+ await select(page,'Competência','01');
+ await page.getByRole('button',{name:'Salvar chave',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Cadastro de chave de serviço'})).toBeHidden();
+ const row=page.getByRole('row').filter({hasText:'Servico ALFA'});await expect(row).toBeVisible();
+ await row.getByRole('button',{name:'Editar',exact:true}).click();
+ await expect(page.getByLabel('Exercício',{exact:true})).toBeVisible();
+ await select(page,'Competência','02');
+ await page.getByRole('button',{name:'Salvar chave',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Cadastro de chave de serviço'})).toBeHidden();
+ await expect(row).toContainText('02/');
+ await row.getByRole('button',{name:'Recalcular chave',exact:true}).click();
+ await page.locator('.ant-popover:visible').getByRole('button',{name:'Recalcular',exact:true}).click();
+ await expect(page.getByText('Chave recalculada.',{exact:true})).toBeVisible();
+ await row.getByRole('button',{name:'Ver',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Detalhes da chave'})).toBeVisible();
+ await page.getByRole('button',{name:/^(Close|Fechar)$/}).click();
+ await row.getByRole('button',{name:'Excluir',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Excluir',exact:true}).click();
+ await expect(row).toHaveCount(0);
+});

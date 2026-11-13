@@ -1,0 +1,41 @@
+{
+  'dados': {
+    'entidaderecad': {
+      'cliente': '',
+      'codigo':'',
+      'tipo':'',
+      'nome':'',
+      'uf':'',
+      'cidade':'',
+      'telefone':'',
+      'site':'',
+      'email': ''
+    },
+    'usuariorecad': {
+      'nome_completo':'',
+      'telefone':'',
+      'email':'',
+      'cargo':''
+    },
+    'contadorrecad': {
+      'nome_completo': '',
+      'telefone': '',
+      'email': ''
+    },
+    'controladorrecad': {
+      'nome_completo': '',
+      'telefone': '',
+      'email': ''
+    },
+    'prefeitorecad': {
+      'nome_completo': '',
+      'telefone': '',
+      'email': ''
+    },
+    'viceorefeitorecad': {
+      'nome_completo': '',
+      'telefone': '',
+      'email': ''
+    }
+  }
+}

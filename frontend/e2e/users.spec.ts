@@ -1,0 +1,68 @@
+import { test, expect, type Page } from '@playwright/test';
+async function login(page: Page, username = process.env.E2E_USERNAME!) {
+  await page.getByLabel('Usuário', { exact: true }).fill(username);
+  await page.getByLabel('Senha', { exact: true }).fill(process.env.E2E_PASSWORD!);
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+}
+test('conta: perfil no cabeçalho usa a foto enviada e mantém o menu lateral sem perfil', async ({ page }) => {
+  await page.goto('/clientes/app/usuarios'); await login(page);
+  await expect(page.getByRole('heading', { name: 'Cadastro de usuário', exact: true })).toBeVisible();
+  const sidebar = page.locator('.desktop-sidebar');
+  await expect(sidebar.getByRole('link', { name: 'Meu perfil', exact: true })).toHaveCount(0);
+  await expect(sidebar.getByRole('link', { name: 'Minha conta', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click();
+  await page.getByRole('link', { name: 'Meu perfil', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Meu perfil', exact: true })).toBeVisible();
+  await page.getByLabel('Avatar', { exact: true }).setInputFiles(process.env.E2E_AVATAR_PATH!);
+  await page.getByRole('button', { name: 'Salvar perfil', exact: true }).click();
+  const avatar = page.locator('.account-menu-trigger img');
+  await expect(avatar).toBeVisible();
+  await expect(avatar).toHaveAttribute('src', /\/media\/avatar\/.+\.png$/);
+  await page.reload(); await expect(avatar).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('button', { name: 'Menu do usuário', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Meu perfil', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: '/tmp/gestao-users-e2e/perfil-mobile.png', fullPage: true });
+});
+
+test('cadastro: limita empresas e permissões e a nova conta acessa apenas sua empresa', async ({ page }) => {
+  await page.goto('/clientes/app/usuarios'); await login(page);
+  await page.getByRole('button', { name: 'Novo usuário', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Novo usuário', exact: true });
+  await dialog.getByLabel('Nome de usuário', { exact: true }).fill('created_browser');
+  await dialog.getByLabel('Nome', { exact: true }).fill('Pessoa cadastrada');
+  await dialog.getByLabel('E-mail', { exact: true }).fill('created-browser@example.test');
+  await dialog.getByLabel('Empresas autorizadas', { exact: true }).click();
+  const dropdown = page.locator('.ant-select-dropdown:visible');
+  await expect(dropdown.getByText('Empresa Beta', { exact: true })).toBeVisible();
+  await expect(dropdown.getByText('Empresa externa', { exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await dialog.getByLabel('Permissões nos módulos', { exact: true }).click();
+  await expect(page.locator('.ant-select-dropdown:visible').getByText(/Cadastrar user/i)).toHaveCount(0);
+  await page.locator('.ant-select-dropdown:visible').getByText('Visualizar cliente', { exact: true }).click();
+  await page.keyboard.press('Escape');
+  await dialog.getByLabel('Senha inicial', { exact: true }).fill(process.env.E2E_PASSWORD!);
+  await dialog.getByLabel('Confirmar senha inicial', { exact: true }).fill(process.env.E2E_PASSWORD!);
+  const response = page.waitForResponse(value => value.url().endsWith('/usuario/api/usuarios/') && value.request().method() === 'POST');
+  await dialog.getByRole('button', { name: 'Cadastrar usuário', exact: true }).click();
+  expect((await response).status()).toBe(201);
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('cell', { name: 'created_browser', exact: true })).toBeVisible();
+  await page.screenshot({ path: '/tmp/gestao-users-e2e/cadastro.png', fullPage: true });
+  await page.getByRole('button', { name: 'Sair', exact: true }).click();
+  await login(page, 'created_browser');
+  await page.locator('.desktop-sidebar').getByRole('menuitem', { name: 'Cadastro', exact: true }).click();
+  await page.locator('.desktop-sidebar').getByRole('link', { name: 'Clientes', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /^Clientes/ })).toBeVisible();
+  await expect(page.locator('.desktop-sidebar').getByRole('link', { name: 'Cadastro de usuário', exact: true })).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Empresa ativa', exact: true }).click();
+  await expect(page.locator('.ant-select-dropdown:visible').getByText('Empresa Alfa', { exact: true })).toBeVisible();
+  await expect(page.locator('.ant-select-dropdown:visible').getByText('Empresa Beta', { exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click();
+  await page.getByRole('link', { name: 'Meu perfil', exact: true }).click();
+  await expect(page.getByLabel('Nome', { exact: true })).toHaveValue('Pessoa cadastrada');
+});
